@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>รายงานการฝึกประสบการณ์วิชาชีพครู</title>
+<meta name="description" content="เว็บรายงานการฝึกสอน — ข้อมูลสถานศึกษา ตารางสอน บันทึกรายวัน แผนการสอน วิจัยในชั้นเรียน และภาพกิจกรรม">
+<meta name="theme-color" content="#1f746c">
+<meta property="og:title" content="รายงานการฝึกประสบการณ์วิชาชีพครู">
+<meta property="og:description" content="รายงานการฝึกสอน — บันทึกรายวัน แผนการสอน วิจัยในชั้นเรียน และภาพกิจกรรม">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📘</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['IBM Plex Sans Thai', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+      colors: {
+        page: '#f5f7f8',
+        brand: {
+          50:'#eefaf7', 100:'#d5f2ec', 200:'#ade4d9', 300:'#7dcfc2',
+          400:'#4bb3a4', 500:'#2f9789', 600:'#1f746c', 700:'#1b5d58',
+          800:'#194b47', 900:'#173f3c'
+        },
+        ink: {
+          50:'#f6f7f8', 100:'#e9ebee', 200:'#d7dbe0', 300:'#b3bac3',
+          400:'#8b939f', 500:'#6b7280', 600:'#4d5560', 700:'#3a4049',
+          800:'#282d34', 900:'#191d22'
+        }
+      },
+      boxShadow: {
+        soft: '0 1px 2px rgba(25,29,34,.04), 0 6px 18px rgba(31,116,108,.05)',
+        card: '0 1px 3px rgba(25,29,34,.05), 0 10px 30px rgba(31,116,108,.06)'
+      }
+    }
+  }
+}
+</script>
+<style>
+  html, body { background:#f5f7f8; }
+  [v-cloak] { display:none; }
+  ::-webkit-scrollbar { width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb { background:#d7dbe0; border-radius:99px; border:2px solid #f5f7f8; }
+  ::-webkit-scrollbar-thumb:hover { background:#b3bac3; }
+  .fade-enter-active, .fade-leave-active { transition:opacity .18s ease; }
+  .fade-enter-from, .fade-leave-to { opacity:0; }
+  @keyframes pop { from { transform:scale(.97) translateY(10px); opacity:0 } to { transform:scale(1) translateY(0); opacity:1 } }
+  .pop { animation:pop .22s cubic-bezier(.2,.8,.2,1); }
+  input[type="date"] { min-height:2.75rem; }
+
+  @media print {
+    .no-print { display:none !important; }
+    html, body { background:#fff; }
+    aside, header { display:none !important; }
+    main { padding:0 !important; max-width:none !important; }
+    section { break-inside:avoid; box-shadow:none !important; border:1px solid #d7dbe0 !important; }
+  }
+</style>
+</head>
+<body class="font-sans text-ink-900 antialiased bg-page">
+
+<div id="app" v-cloak></div>
+
+<noscript>
+  <div style="padding:2rem;text-align:center;font-family:sans-serif">
+    เว็บนี้ต้องเปิดใช้งาน JavaScript จึงจะแสดงผลได้
+  </div>
+</noscript>
+
+<!-- ?v=... คือตัวกันแคช: ถ้าแก้ไฟล์ js แล้วหน้าเว็บไม่อัปเดต ให้เปลี่ยนเลขนี้ทุกบรรทัดพร้อมกัน -->
+<script src="js/config.js?v=1.4.1"></script>
+<script src="js/drive.js?v=1.4.1"></script>
+<script src="js/store.js?v=1.4.1"></script>
+<script src="js/ui.js?v=1.4.1"></script>
+<script src="js/pages.js?v=1.4.1"></script>
+<script src="js/app.js?v=1.4.1"></script>
+</body>
+</html>
