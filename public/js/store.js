@@ -28,7 +28,8 @@ window.Store = (function () {
         mentor: '',
         academicYear: '',
         period: '',
-        photo: null
+        photo: null,
+        mentorPhoto: null
       },
       school: {
         name: '',
@@ -41,6 +42,7 @@ window.Store = (function () {
         vision: '',
         history: '',
         logo: null,
+        directorPhoto: null,
         photos: []
       },
       schedules: [
@@ -49,6 +51,7 @@ window.Store = (function () {
       ],
       logs: [],
       plans: [],
+      supervisions: [],
       research: [],
       activityPhotos: [],
       teachingPhotos: [],
@@ -73,7 +76,7 @@ window.Store = (function () {
     d.profile = Object.assign({}, base.profile, raw.profile || {});
     d.school = Object.assign({}, base.school, raw.school || {});
     d.summary = Object.assign({}, base.summary, raw.summary || {});
-    ['logs', 'plans', 'research', 'activityPhotos', 'teachingPhotos'].forEach(function (k) {
+    ['logs', 'plans', 'supervisions', 'research', 'activityPhotos', 'teachingPhotos'].forEach(function (k) {
       if (!Array.isArray(d[k])) d[k] = [];
     });
     if (!Array.isArray(d.school.photos)) d.school.photos = [];
@@ -215,10 +218,13 @@ window.Store = (function () {
     function add(a) { if (a && a.storage === 'drive' && a.id) ids.push(a.id); }
     var d = state.data;
     add(d.profile.photo);
+    add(d.profile.mentorPhoto);
     add(d.school.logo);
+    add(d.school.directorPhoto);
     (d.school.photos || []).forEach(add);
     (d.schedules || []).forEach(function (t) { (t.images || []).forEach(add); });
     (d.plans || []).forEach(function (p) { add(p.slide); add(p.file); (p.extra || []).forEach(add); });
+    (d.supervisions || []).forEach(function (s) { (s.files || []).forEach(add); });
     (d.research || []).forEach(function (r) { (r.files || []).forEach(add); });
     (d.activityPhotos || []).forEach(function (p) { add(p.file); });
     (d.teachingPhotos || []).forEach(function (p) { add(p.file); });

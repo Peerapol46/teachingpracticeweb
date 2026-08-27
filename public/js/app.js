@@ -29,6 +29,7 @@
     { key: "schedule", label: "ตารางสอน", icon: "calendar" },
     { key: "log", label: "บันทึกรายวัน", icon: "note" },
     { key: "plan", label: "แผนการสอน", icon: "plan" },
+    { key: "supervision", label: "นิเทศการสอน", icon: "eye" },
     { key: "research", label: "วิจัยในชั้นเรียน", icon: "research" },
     { key: "activity", label: "รูปกิจกรรม", icon: "photo" },
     { key: "teaching", label: "รูปฝึกสอน", icon: "board" },
@@ -343,6 +344,7 @@
       "        <page-schedule v-else-if=\"page==='schedule'\"/>",
       "        <page-log v-else-if=\"page==='log'\"/>",
       "        <page-plan v-else-if=\"page==='plan'\"/>",
+      "        <page-supervision v-else-if=\"page==='supervision'\"/>",
       "        <page-research v-else-if=\"page==='research'\"/>",
       '        <page-gallery v-else-if="page===\'activity\'" field="activityPhotos" title="รูปกิจกรรม" subtitle="ภาพกิจกรรมต่าง ๆ ของสถานศึกษาที่ได้เข้าร่วม" icon="photo" key="activity"/>',
       '        <page-gallery v-else-if="page===\'teaching\'" field="teachingPhotos" title="รูปฝึกสอน" subtitle="ภาพบรรยากาศการจัดการเรียนการสอนในชั้นเรียน" icon="board" key="teaching"/>',
@@ -403,6 +405,7 @@
   app.component("page-schedule", Pages.Schedule);
   app.component("page-log", Pages.Log);
   app.component("page-plan", Pages.Plan);
+  app.component("page-supervision", Pages.Supervision);
   app.component("page-research", Pages.Research);
   app.component("page-gallery", Pages.Gallery);
   app.component("page-summary", Pages.Summary);
