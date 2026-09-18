@@ -51,7 +51,6 @@ window.Store = (function () {
       ],
       logs: [],
       plans: [],
-      supervisions: [],
       research: [],
       activityPhotos: [],
       teachingPhotos: [],
@@ -76,13 +75,14 @@ window.Store = (function () {
     d.profile = Object.assign({}, base.profile, raw.profile || {});
     d.school = Object.assign({}, base.school, raw.school || {});
     d.summary = Object.assign({}, base.summary, raw.summary || {});
-    ['logs', 'plans', 'supervisions', 'research', 'activityPhotos', 'teachingPhotos'].forEach(function (k) {
+    ['logs', 'plans', 'research', 'activityPhotos', 'teachingPhotos'].forEach(function (k) {
       if (!Array.isArray(d[k])) d[k] = [];
     });
     if (!Array.isArray(d.school.photos)) d.school.photos = [];
     if (!Array.isArray(d.summary.files)) d.summary.files = [];
     if (!Array.isArray(d.schedules) || !d.schedules.length) d.schedules = emptyData().schedules;
     d.schedules.forEach(function (t) { if (!Array.isArray(t.images)) t.images = []; });
+    d.research.forEach(function (r) { if (!Array.isArray(r.files)) r.files = []; });
     return d;
   }
 
@@ -146,15 +146,21 @@ window.Store = (function () {
     saveTimer = setTimeout(function () { save(); }, 1200);
   }
 
-  function save(force) {
-    if (state.mode === 'view') return Promise.resolve();
-    state.data.updatedAt = new Date().toISOString();
-    saveLocal();
-    if (state.mode !== 'drive') {
-      state.dirty = false;
-      state.lastSaved = new Date();
-      return Promise.resolve();
-    }
+function save(force) {
+  if (state.mode === 'view') return Promise.resolve();
+  state.data.updatedAt = new Date().toISOString();
+  
+  var ok = saveLocal();
+  if (!ok && state.mode === 'local') {
+    // หากบันทึกลงเครื่องไม่สำเร็จ จะไม่รีเซ็ต dirty เพื่อให้ผู้ใช้รู้ว่ายังมีข้อมูลค้างอยู่
+    return Promise.resolve();
+  }
+
+  if (state.mode !== 'drive') {
+    state.dirty = false;
+    state.lastSaved = new Date();
+    return Promise.resolve();
+  }
     if (state.saving && !force) { scheduleSave(); return Promise.resolve(); }
     state.saving = true;
     state.error = '';
@@ -224,7 +230,6 @@ window.Store = (function () {
     (d.school.photos || []).forEach(add);
     (d.schedules || []).forEach(function (t) { (t.images || []).forEach(add); });
     (d.plans || []).forEach(function (p) { add(p.slide); add(p.file); (p.extra || []).forEach(add); });
-    (d.supervisions || []).forEach(function (s) { (s.files || []).forEach(add); });
     (d.research || []).forEach(function (r) { (r.files || []).forEach(add); });
     (d.activityPhotos || []).forEach(function (p) { add(p.file); });
     (d.teachingPhotos || []).forEach(function (p) { add(p.file); });

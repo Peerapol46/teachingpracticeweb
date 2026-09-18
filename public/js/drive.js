@@ -20,41 +20,26 @@ window.Drive = (function () {
 
   function restoreToken() {
     try {
-      var t = JSON.parse(
-        localStorage.getItem(TOKEN_KEY) || 'null'
-      );
-
-      if (t && t.token) {
+      var t = JSON.parse(sessionStorage.getItem(TOKEN_KEY) || 'null');
+      if (t && t.expiry > Date.now() + 30000) {
         accessToken = t.token;
-        tokenExpiry = t.expiry || 0;
+        tokenExpiry = t.expiry;
         profile = t.profile || null;
         folderId = t.folderId || null;
         dataFileId = t.dataFileId || null;
-
         return true;
       }
-    } catch (e) {
-      console.warn('restoreToken error', e);
-    }
-
+    } catch (e) { /* ignore */ }
     return false;
   }
 
   function persistToken() {
     try {
-      localStorage.setItem(
-        TOKEN_KEY,
-        JSON.stringify({
-          token: accessToken,
-          expiry: tokenExpiry,
-          profile: profile,
-          folderId: folderId,
-          dataFileId: dataFileId
-        })
-      );
-    } catch (e) {
-      console.warn('persistToken error', e);
-    }
+      sessionStorage.setItem(TOKEN_KEY, JSON.stringify({
+        token: accessToken, expiry: tokenExpiry, profile: profile,
+        folderId: folderId, dataFileId: dataFileId
+      }));
+    } catch (e) { /* ignore */ }
   }
 
   function isConfigured() { return !!(cfg().googleClientId); }
@@ -71,9 +56,7 @@ window.Drive = (function () {
       callback: function (resp) {
         if (resp && resp.access_token) {
           accessToken = resp.access_token;
-          tokenExpiry =
-            Date.now() +
-            ((resp.expires_in || 3600) - 120) * 1000;
+          tokenExpiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
           persistToken();
           if (pendingResolve) pendingResolve(accessToken);
         } else if (pendingReject) {
@@ -131,16 +114,7 @@ window.Drive = (function () {
 
   /** คืน access token ที่ยังไม่หมดอายุ (ต่ออายุเงียบ ๆ ถ้าทำได้) */
   function withToken() {
-    // Token ยังใช้ได้
-    if (
-      accessToken &&
-      tokenExpiry > Date.now() + 120000
-    ) {
-      return Promise.resolve(accessToken);
-    }
-
-    // Token ใกล้หมดอายุ
-    // ขอใหม่แบบไม่เด้งหน้า Login
+    if (accessToken && tokenExpiry > Date.now()) return Promise.resolve(accessToken);
     return requestToken(false);
   }
 
@@ -331,29 +305,11 @@ window.Drive = (function () {
   }
 
   function signOut() {
-    if (
-      accessToken &&
-      window.google &&
-      google.accounts &&
-      google.accounts.oauth2
-    ) {
-      try {
-        google.accounts.oauth2.revoke(
-          accessToken,
-          function(){}
-        );
-      } catch(e){}
+    if (accessToken && window.google && google.accounts && google.accounts.oauth2) {
+      try { google.accounts.oauth2.revoke(accessToken, function () {}); } catch (e) { /* ignore */ }
     }
-
-    accessToken = null;
-    tokenExpiry = 0;
-    profile = null;
-    folderId = null;
-    dataFileId = null;
-
-    try {
-      localStorage.removeItem(TOKEN_KEY);
-    } catch(e){}
+    accessToken = null; tokenExpiry = 0; profile = null; folderId = null; dataFileId = null;
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) { /* ignore */ }
   }
 
   /** โหลดข้อมูลจากลิงก์แชร์ (ไม่ต้องล็อกอิน) — ต้องมี API key */
@@ -392,54 +348,15 @@ window.Drive = (function () {
 
   return {
     isConfigured: isConfigured,
-
-    isSignedIn: function () {
-      return !!accessToken;
-    },
-
-    profile: function () {
-      return profile;
-    },
-
-    dataFileId: function () {
-      return dataFileId;
-    },
-
-    folderId: function () {
-      return folderId;
-    },
-
-    folderUrl: function () {
-      return folderId
-        ? 'https://drive.google.com/drive/folders/' + folderId
-        : null;
-    },
-
+    isSignedIn: function () { return !!accessToken && tokenExpiry > Date.now(); },
+    profile: function () { return profile; },
+    dataFileId: function () { return dataFileId; },
+    folderId: function () { return folderId; },
+    folderUrl: function () { return folderId ? 'https://drive.google.com/drive/folders/' + folderId : null; },
     restore: function () {
-      // โหลด Token ที่จำไว้
-      if (!restoreToken()) {
-        return Promise.resolve(null);
-      }
-
-      // ตรวจ Token ก่อนใช้งาน
-      return withToken()
-        .then(function () {
-          return fetchProfile();
-        })
-        .catch(function () {
-          // ถ้า Token ใช้ไม่ได้ ให้ล้าง Session
-          accessToken = null;
-          tokenExpiry = 0;
-          profile = null;
-
-          try {
-            localStorage.removeItem(TOKEN_KEY);
-          } catch(e){}
-
-          return null;
-        });
+      if (!restoreToken()) return Promise.resolve(null);
+      return fetchProfile().catch(function () { return null; });
     },
-
     signIn: signIn,
     signOut: signOut,
     uploadFile: uploadFile,

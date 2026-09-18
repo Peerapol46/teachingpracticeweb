@@ -344,7 +344,7 @@
       "        <page-schedule v-else-if=\"page==='schedule'\"/>",
       "        <page-log v-else-if=\"page==='log'\"/>",
       "        <page-plan v-else-if=\"page==='plan'\"/>",
-      "        <page-supervision v-else-if=\"page==='supervision'\"/>",
+      "         <page-supervision v-else-if=\"page==='supervision'\"/>",
       "        <page-research v-else-if=\"page==='research'\"/>",
       '        <page-gallery v-else-if="page===\'activity\'" field="activityPhotos" title="รูปกิจกรรม" subtitle="ภาพกิจกรรมต่าง ๆ ของสถานศึกษาที่ได้เข้าร่วม" icon="photo" key="activity"/>',
       '        <page-gallery v-else-if="page===\'teaching\'" field="teachingPhotos" title="รูปฝึกสอน" subtitle="ภาพบรรยากาศการจัดการเรียนการสอนในชั้นเรียน" icon="board" key="teaching"/>',

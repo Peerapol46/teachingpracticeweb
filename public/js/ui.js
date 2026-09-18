@@ -125,6 +125,16 @@ window.UI = (function () {
   var Modal = {
     props: { show: Boolean, title: String, wide: Boolean },
     emits: ['close'],
+    mounted: function () {
+      var self = this;
+      this._escHandler = function (e) {
+        if (e.key === 'Escape' && self.show) self.$emit('close');
+      };
+      window.addEventListener('keydown', this._escHandler);
+    },
+    unmounted: function () {
+      window.removeEventListener('keydown', this._escHandler);
+    },
     template: [
       '<transition name="fade"><div v-if="show" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 no-print">',
       '  <div class="absolute inset-0 bg-ink-900/40 backdrop-blur-[2px]" @click="$emit(\'close\')"></div>',
@@ -213,116 +223,199 @@ window.UI = (function () {
     ].join('')
   };
 
-  /** แสดงไฟล์แนบ 1 ไฟล์ (รูปภาพ = พรีวิว, ไฟล์อื่น = การ์ด) */
-    /** แสดงไฟล์แนบ 1 ไฟล์ (รูปภาพ = พรีวิว + Lightbox, ไฟล์อื่น = การ์ด) */
+  /** แสดงไฟล์แนบ 1 ไฟล์ (รูปภาพ = พรีวิว + กดดูรูปขนาดใหญ่, ไฟล์อื่น = การ์ด) */
   var Asset = {
-    props: {
-      asset: Object,
-      removable: Boolean,
-      ratio: { type: String, default: 'aspect-[4/3]' }
-    },
-
+    props: { asset: Object, removable: Boolean, ratio: { type: String, default: 'aspect-[4/3]' } },
     emits: ['remove'],
-
     data: function () {
-      return {
-        preview: false
-      };
+      return { showPopup: false };
     },
-
-    methods: {
-      openPreview: function () {
-        if (this.isImage) {
-          this.preview = true;
-        }
-      },
-
-      closePreview: function () {
-        this.preview = false;
-      },
-
-      keyClose: function (e) {
-        if (e.key === 'Escape') {
-          this.closePreview();
-        }
-      }
-    },
-
-    mounted: function () {
-      window.addEventListener('keydown', this.keyClose);
-    },
-
-    beforeUnmount: function () {
-      window.removeEventListener('keydown', this.keyClose);
-    },
-
     computed: {
       isImage: function () {
-        return this.asset && /^image\//.test(this.asset.mimeType || '');
+        if (!this.asset) return false;
+        var m = this.asset.mimeType || '';
+        if (/^image\//.test(m)) return true;
+        var n = this.asset.name || '';
+        return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(n);
       },
-
+      imageSrc: function () {
+        var a = this.asset;
+        if (!a) return '';
+        return a.thumb || a.download || a.url || '';
+      },
       sizeText: function () {
         var s = this.asset && this.asset.size;
         if (!s) return '';
-
-        return s > 1048576
-          ? (s / 1048576).toFixed(1) + ' MB'
-          : Math.max(1, Math.round(s / 1024)) + ' KB';
+        return s > 1048576 ? (s / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(s / 1024)) + ' KB';
       }
     },
+    mounted: function () {
+      var self = this;
+      this._escHandler = function (e) {
+        if (e.key === 'Escape' && self.showPopup) self.showPopup = false;
+      };
+      window.addEventListener('keydown', this._escHandler);
+    },
+    unmounted: function () {
+      window.removeEventListener('keydown', this._escHandler);
+    },
+    methods: {
+      handleClick: function () {
+        if (this.isImage) {
+          this.showPopup = true;
+        } else {
+          this.openAsset();
+        }
+      },
+      getMime: function () {
+        var a = this.asset;
+        if (!a) return 'application/octet-stream';
+        var mime = a.mimeType || '';
+        if (mime && mime !== 'application/octet-stream') return mime;
+        var name = a.name || '';
+        var ext = name.split('.').pop().toLowerCase();
+        var map = {
+          pdf: 'application/pdf',
+          png: 'image/png',
+          jpg: 'image/jpeg',
+          jpeg: 'image/jpeg',
+          gif: 'image/gif',
+          webp: 'image/webp',
+          svg: 'image/svg+xml',
+          doc: 'application/msword',
+          docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          ppt: 'application/vnd.ms-powerpoint',
+          pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          xls: 'application/vnd.ms-excel',
+          xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          txt: 'text/plain',
+          zip: 'application/zip'
+        };
+        return map[ext] || mime || 'application/octet-stream';
+      },
+      createLocalBlobUrl: function () {
+        var a = this.asset;
+        if (!a || typeof a.url !== 'string' || !a.url.startsWith('data:')) return null;
+        try {
+          var parts = a.url.split(',');
+          var bstr = atob(parts[1]);
+          var n = bstr.length;
+          var u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          var blob = new Blob([u8arr], { type: this.getMime() });
+          return URL.createObjectURL(blob);
+        } catch (e) {
+          console.error('createLocalBlobUrl error:', e);
+          return null;
+        }
+      },
+      openAsset: function () {
+        if (!this.asset) return;
+        var a = this.asset;
 
+        // 1. Google Drive / Web URL
+        if (a.storage === 'drive' || /^https?:\/\//.test(a.url || '')) {
+          window.open(a.url, '_blank', 'noopener,noreferrer');
+          return;
+        }
+
+        // 2. Local Base64 Data URL
+        var blobUrl = this.createLocalBlobUrl();
+        if (blobUrl) {
+          var mime = this.getMime();
+          var isViewable = /^image\//.test(mime) ||
+                           mime === 'application/pdf' ||
+                           /\.(pdf|jpg|jpeg|png|gif|webp|svg|txt)$/i.test(a.name || '');
+
+          if (isViewable) {
+            var newWin = window.open(blobUrl, '_blank');
+            if (!newWin) {
+              this.triggerDownload(blobUrl, a.name);
+            }
+          } else {
+            this.triggerDownload(blobUrl, a.name);
+          }
+
+          setTimeout(function () {
+            URL.revokeObjectURL(blobUrl);
+          }, 60000);
+        } else if (a.url) {
+          window.open(a.url, '_blank', 'noopener,noreferrer');
+        }
+      },
+      downloadAsset: function () {
+        if (!this.asset) return;
+        var a = this.asset;
+
+        // 1. Google Drive
+        if (a.storage === 'drive' && a.download) {
+          window.open(a.download, '_blank', 'noopener,noreferrer');
+          return;
+        }
+        if (/^https?:\/\//.test(a.url || '')) {
+          window.open(a.download || a.url, '_blank', 'noopener,noreferrer');
+          return;
+        }
+
+        // 2. Local Base64 Data URL
+        var blobUrl = this.createLocalBlobUrl();
+        if (blobUrl) {
+          this.triggerDownload(blobUrl, a.name);
+          setTimeout(function () {
+            URL.revokeObjectURL(blobUrl);
+          }, 60000);
+        } else if (a.url) {
+          this.triggerDownload(a.url, a.name);
+        }
+      },
+      triggerDownload: function (url, filename) {
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = filename || 'file';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    },
     template: [
       '<div v-if="asset" class="group relative rounded-2xl overflow-hidden border border-ink-100 bg-white">',
-
-      '  <div v-if="isImage" @click="openPreview" class="cursor-pointer">',
-      '    <div :class="[ratio, \'bg-ink-50 overflow-hidden\']">',
-      '      <img :src="asset.thumb || asset.url || asset.download"',
-      '        :alt="asset.name || \'\'"',
-      '        loading="lazy"',
-      '        class="w-full h-full object-cover transition duration-300 hover:scale-105"',
-      '        referrerpolicy="no-referrer">',
+      '  <div @click="handleClick" class="block cursor-pointer">',
+      '    <div v-if="isImage" :class="[ratio, \'bg-ink-50 relative group\']">',
+      '      <img :src="imageSrc" :alt="asset.name" loading="lazy" class="w-full h-full object-cover" referrerpolicy="no-referrer">',
+      '      <div class="absolute inset-0 bg-ink-900/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white"><ui-icon name="eye" cls="w-6 h-6 drop-shadow"/></div>',
+      '    </div>',
+      '    <div v-else class="flex items-center gap-3 p-3.5">',
+      '      <div class="w-10 h-10 shrink-0 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center"><ui-icon name="file" cls="w-5 h-5"/></div>',
+      '      <div class="min-w-0 flex-1"><p class="text-sm font-medium text-ink-800 truncate">{{ asset.name }}</p>',
+      '        <p class="text-xs text-ink-400">{{ sizeText }}</p></div>',
       '    </div>',
       '  </div>',
-
-      '  <div v-else class="flex items-center gap-3 p-3.5">',
-      '    <div class="w-10 h-10 shrink-0 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">',
-      '      <ui-icon name="file" cls="w-5 h-5"/>',
-      '    </div>',
-      '    <div class="min-w-0">',
-      '      <p class="text-sm font-medium text-ink-800 truncate">{{ asset.name || "ไฟล์" }}</p>',
-      '      <p class="text-xs text-ink-400">{{ sizeText }}</p>',
-      '    </div>',
-      '  </div>',
-
-      '  <p v-if="isImage && asset.name" class="px-3 py-2 text-xs text-ink-500 truncate">',
-      '    {{ asset.name }}',
-      '  </p>',
-
+      '  <p v-if="isImage && asset.name" class="px-3 py-2 text-xs text-ink-500 truncate">{{ asset.name }}</p>',
       '  <button v-if="removable" type="button" @click.stop.prevent="$emit(\'remove\')"',
       '    class="no-print absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/95 text-ink-600 shadow-soft opacity-0 group-hover:opacity-100 focus:opacity-100 transition flex items-center justify-center hover:text-red-600">',
-      '    <ui-icon name="trash" cls="w-4 h-4"/>',
-      '  </button>',
-
-
-      /* ===== Lightbox ===== */
-      '  <div v-if="preview"',
-      '    @click="closePreview"',
-      '    class="fixed inset-0 z-[999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">',
-
-      '    <button',
-      '      @click.stop="closePreview"',
-      '      class="absolute top-5 right-5 w-11 h-11 rounded-full bg-white/90 text-gray-700 text-3xl shadow-xl flex items-center justify-center hover:bg-white">',
-      '      ×',
-      '    </button>',
-
-'    <img',
-'      @click.stop',
-'      :src="asset.thumb || asset.url || asset.download"',
-'      @error="$event.target.src = asset.url || asset.download"',
-'      class="max-w-[95vw] max-h-[90vh] object-contain rounded-xl shadow-2xl">',
-      
-      '  </div>',
-
+      '    <ui-icon name="trash" cls="w-4 h-4"/></button>',
+      '',
+      '  <teleport to="body">',
+      '    <transition name="fade">',
+      '      <div v-if="showPopup" class="fixed inset-0 z-[80] bg-ink-900/85 backdrop-blur-[2px] flex items-center justify-center p-4 sm:p-6 no-print" @click="showPopup=false">',
+      '        <button type="button" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition z-10" @click.stop="showPopup=false" title="ปิด (Esc)">',
+      '          <ui-icon name="x" cls="w-6 h-6"/>',
+      '        </button>',
+      '        <figure class="max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center" @click.stop>',
+      '          <img :src="imageSrc" :alt="asset.name" class="max-w-full max-h-[78vh] object-contain rounded-2xl shadow-2xl pop" referrerpolicy="no-referrer">',
+      '          <figcaption class="mt-3.5 flex flex-wrap items-center justify-center gap-3 text-white/90 text-sm text-center">',
+      '            <span v-if="asset.name" class="font-medium truncate max-w-sm sm:max-w-md">{{ asset.name }}</span>',
+      '            <span v-if="sizeText" class="text-white/60 text-xs">({{ sizeText }})</span>',
+      '            <button type="button" @click="downloadAsset" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/15 hover:bg-white/25 text-xs text-white transition">',
+      '              <ui-icon name="download" cls="w-3.5 h-3.5"/> ดาวน์โหลด',
+      '            </button>',
+      '          </figcaption>',
+      '        </figure>',
+      '      </div>',
+      '    </transition>',
+      '  </teleport>',
       '</div>'
     ].join('')
   };
